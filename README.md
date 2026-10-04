@@ -76,7 +76,7 @@ Browser checks need Playwright Chromium. The suite does not call providers. The 
 
 ## Judge demo access
 
-**[Open The Ropes](https://rbm-apprentice.onrender.com)**. The hosted homepage is live behind native Basic authentication. Judges receive the demo username/password separately through an approved private route; those credentials and provider keys are never in this repository. Exact HTTPS Host/Origin checks, rate/concurrency limits and a persistent ledger protect paid routes. Mock is the default; paid calls remain disabled pending the consenting human rehearsal. The operator must verify and document the actual human result before claiming live learning transfer. A clearly labelled mock walkthrough is available while that proof is pending. Product branding is The Ropes; technical repository/service identifiers remain unchanged.
+**[Open The Ropes](https://rbm-apprentice.onrender.com)**. The hosted homepage is live behind native Basic authentication. Judges receive the demo username/password separately through an approved private route; those credentials and provider keys are never in this repository. Exact HTTPS Host/Origin checks, rate/concurrency limits and a persistent ledger protect paid routes. Mock is the default; paid calls remain disabled pending the consenting human rehearsal. The operator must verify and document the actual human result before claiming live learning transfer. A clearly labelled mock walkthrough is available while that proof is pending. Source: [papermelon/the-ropes](https://github.com/papermelon/the-ropes). The Render service is named **The Ropes**, and the application package is `the-ropes`. The current hosted address remains the assigned URL above until the hosting URL migration is verified.
 
 ## License
 

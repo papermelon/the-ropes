@@ -2,7 +2,7 @@
 # Complete account/terms and secure environment setup before deploying.
 services:
   - type: web
-    name: rbm-apprentice
+    name: The Ropes
     runtime: node
     region: singapore
     plan: 0.5c-512mb
