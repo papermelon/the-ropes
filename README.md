@@ -39,7 +39,7 @@ React/TypeScript and Vite supply the browser workspace. A Node HTTP/WebSocket se
 - **Scribe v2 Realtime** receives 16 kHz PCM audio through its one-use same-origin server relay. The provider token stays on the server. The voice API supplies `{agentPath, scribePath, maxSeconds}` only. Both relays apply authentication, Host/Origin, revoke/kill and server duration bounds. Microphone permission/format preflight happens before paid reservation. Transcripts/activity inform timing; pauses are a heuristic, not proof that someone has stopped thinking.
 - A disk-backed budget ledger preserves conservative reservations and known/unknown usage across restarts. Paid calls remain capped, rate/concurrency-limited and protected by access controls in public mode. There is no automatic live-to-mock success fallback.
 
-See [architecture](docs/architecture.md) for evidence and privacy boundaries, and [deployment runbook](docs/deployment.md) for the approved hosting shape once its final configuration is verified.
+See [architecture](docs/architecture.md) for evidence and privacy boundaries, and [deployment runbook](docs/deployment.md) for the verified hosting shape and remaining human rehearsal checks.
 
 ## Safe live setup
 
@@ -62,7 +62,7 @@ Local deletion cannot retract material already sent to a provider. Remote deleti
 
 ## Verification status
 
-The final local `npm run check` passed **lint, typecheck, build, 36 unit/API tests and nine browser tests** at 16:00 SGT on 4 October 2026, including cited Map synthesis validation, persistent ledger, private resume and voice relay/teardown checks. Earlier Claude vision, Expressive ElevenAgents audio and Scribe component checks used fictional pixels and synthetic speech. **Human microphone, interruptions, spoken teach-back, independent unseen transfer and the fresh hosted flow remain unrun.** The sanitized publication candidate is checked separately before code publication. Automated fixtures and synthetic speech do not establish human success.
+The final local `npm run check` passed **lint, typecheck, build, 36 unit/API tests and nine browser tests** after the branding update at 16:49 SGT on 4 October 2026, including cited Map synthesis validation, persistent ledger, private resume and voice relay/teardown checks. Earlier Claude vision, Expressive ElevenAgents audio and Scribe component checks used fictional pixels and synthetic speech. **Human microphone, interruptions, spoken teach-back and independent unseen transfer remain unrun.** Hosted HTTPS health/authentication, authenticated app/status, invalid-Origin rejection and blocked unauthenticated WSS upgrade passed. The complete disk ledger survived a restart with initialization disabled. The user confirmed a fresh Chrome sign-in and homepage. These checks establish hosted access, not successful human voice transport or transfer. The sanitized source and built bundle were scanned before publication. Automated fixtures and synthetic speech do not establish human success.
 
 ```sh
 npm run lint
@@ -76,7 +76,7 @@ Browser checks need Playwright Chromium. The suite does not call providers. The 
 
 ## Judge demo access
 
-Hosted URL: **pending verified deployment**. The final public-mode demo requires approved access instructions and an HTTPS host/origin allowlist. The judge receives demo access, never provider keys. Do not describe an unverified link as working. A safe mock walkthrough is available locally with the loop above.
+**[Open The Ropes](https://rbm-apprentice.onrender.com)**. The hosted homepage is live behind native Basic authentication. Judges receive the demo username/password separately through an approved private route; those credentials and provider keys are never in this repository. Exact HTTPS Host/Origin checks, rate/concurrency limits and a persistent ledger protect paid routes. Mock is the default; paid calls remain disabled pending the consenting human rehearsal. The operator must verify and document the actual human result before claiming live learning transfer. A clearly labelled mock walkthrough is available while that proof is pending. Product branding is The Ropes; technical repository/service identifiers remain unchanged.
 
 ## License
 
