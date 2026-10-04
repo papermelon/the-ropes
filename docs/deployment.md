@@ -2,6 +2,12 @@
 
 Prepared for one Node web service with a one-GB private disk. This document does not create a Render account, accept terms, enter credentials or deploy. Use the approved sanitized source snapshot. Public deployment and costs need the operator's authorization; any new binding account/service terms need explicit acceptance. Never paste credentials into chat or this document.
 
+## Current production endpoint
+
+The active Render service is **The Ropes**, connected to [papermelon/the-ropes](https://github.com/papermelon/the-ropes). Use **https://the-ropes.onrender.com** for the hosted demo and share the existing access credentials separately. Exact host/origin settings are `ALLOWED_HOSTS=the-ropes.onrender.com` and `ALLOWED_ORIGINS=https://the-ropes.onrender.com`.
+
+The replacement preserves the complete retained provider ledger rather than initializing a new allowance. Keep `BUDGET_INITIALIZE_ALLOWED=false`, `LIVE_USAGE_APPROVED=false` and `LIVE_USAGE_DISABLED=true` until the separately consenting rehearsal. The approved replacement is US$7/month compute plus US$0.25/month for the one-GB disk, prorated; retaining the suspended previous service's disk adds US$0.25/month. Suspend the previous compute only after verifying the new endpoint and retained ledger.
+
 ## Shape and cost gate
 
 `render.yaml` uses Render's current `0.5c-512mb` web-service plan ID, Singapore, one instance, one-GB disk at `/var/data` and manual deployment. The reviewed hosting budget for this instance is US$10 total; check the final account quote and billed period before creation, do not choose paid extras or exceed that cap. Record the actual recurring price and shutdown plan privately. A deployment template is not a billing limit. Preserve the ledger when suspending/redeploying; disk deletion is a separate destructive action.
