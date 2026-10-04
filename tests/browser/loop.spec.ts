@@ -1,4 +1,68 @@
 import { test, expect, type Page } from '@playwright/test';
+import { createPrivateExport } from '../../src/private-session';
+import { confirmedFixture } from '../fixtures';
+
+test('own project validates period links and roundtrips privately without sample facts or recording', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Use my own project' }).click();
+  const form = page.getByRole('dialog', { name: 'Set up your project', exact: true });
+  await form.getByLabel('Project / initiative name', { exact: true }).fill('AUTOMATED TEST initiative');
+  await form.getByLabel('Lead division / owner', { exact: true }).fill('TEST owner');
+  await form.getByLabel('Reporting period', { exact: true }).fill('TEST review period');
+  await form.getByLabel('Current period identifier', { exact: false }).fill('Q2');
+  await form.getByLabel('Annual commitment / goal', { exact: true }).fill('TEST stated annual goal');
+  await form.getByLabel('Annual commitment agreement', { exact: true }).selectOption('draft');
+  await form.getByLabel('Annual due date', { exact: false }).fill('Unknown');
+  await form.getByLabel('Period identifier', { exact: true }).fill('Q1');
+  await form.getByLabel('Milestone agreement', { exact: true }).selectOption('missing');
+  await form.getByLabel('Milestone / missing benchmark explanation', { exact: true }).fill('TEST no agreed benchmark supplied');
+  await form.getByLabel('Recorded delivery', { exact: true }).selectOption('unknown');
+  await form.getByLabel('Submitted progress / update', { exact: true }).fill('TEST progress supplied by the user');
+  await form.getByLabel('Submitted performance status', { exact: true }).selectOption('At risk');
+  await form.getByRole('button', { name: 'Use this project' }).click();
+  await expect(form.getByRole('alert')).toContainText('selected quarter must have a milestone entry');
+  await form.getByLabel('Period identifier', { exact: true }).fill('Q2');
+  await form.getByRole('button', { name: 'Use this project' }).click();
+  await expect(form).toHaveCount(0);
+  await expect(page.getByText('AUTOMATED TEST initiative', { exact: false })).toBeVisible();
+  await expect(page.getByText('Your project data', { exact: false })).toBeVisible();
+  await expect(page.getByText('TEST progress supplied by the user', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Past delivery assessment', { exact: true })).toHaveValue('not-assessed');
+  await expect(page.getByText('CivicBridge', { exact: false })).toHaveCount(0);
+  await sessionAction(page, 'Evidence & settings');
+  await page.getByText('Session controls & provider diagnostics', { exact: false }).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export private Work Map', exact: true }).click();
+  const path = (await (await download).path())!;
+  const exported = JSON.parse(await import('node:fs/promises').then(fs => fs.readFile(path, 'utf8')));
+  expect(exported.resume.expertReport.source).toBe('user-provided');
+  expect(exported.resume.expertReport.initiative).toBe('AUTOMATED TEST initiative');
+  expect(exported.resume.expertReport.evidence).toEqual([]);
+  expect(exported.frames).toEqual([]); expect(exported.segments).toEqual([]);
+  await page.reload(); await page.getByRole('button', { name: 'Begin expert review' }).click();
+  await sessionAction(page, 'Evidence & settings');
+  await page.getByText('Session controls & provider diagnostics', { exact: false }).click();
+  await page.getByLabel('Restore private Work Map', { exact: true }).setInputFiles(path);
+  await expect(page.getByText('AUTOMATED TEST initiative', { exact: false })).toBeVisible();
+  await expect(page.getByLabel('Past delivery assessment', { exact: true })).toHaveValue('not-assessed');
+  // Test-only historical map fixture exercises the real-project handoff without generating expertise.
+  const fixturePath = `${path}-teach.json`;
+  const fixture = createPrivateExport(confirmedFixture(), { ...exported.resume, view: 'map' });
+  await import('node:fs/promises').then(fs => fs.writeFile(fixturePath, JSON.stringify(fixture)));
+  await sessionAction(page, 'Evidence & settings');
+  await page.getByText('Session controls & provider diagnostics', { exact: false }).click();
+  await page.getByLabel('Restore private Work Map', { exact: true }).setInputFiles(fixturePath);
+  await page.getByRole('button', { name: 'Present simulated teach-back' }).click();
+  await page.getByRole('button', { name: 'Yes, this is how I review' }).click();
+  await page.getByRole('button', { name: 'Help a colleague prepare' }).click();
+  let fictionalCaseRequests = 0;
+  await page.route('**/api/session/*/case', route => { fictionalCaseRequests++; return route.abort(); });
+  await page.getByRole('button', { name: 'Use colleague’s project' }).click();
+  const colleagueForm = page.getByRole('dialog', { name: 'Set up the colleague’s new project', exact: true });
+  await expect(colleagueForm.getByLabel('Project / initiative name', { exact: true })).toHaveValue('');
+  expect(fictionalCaseRequests).toBe(0);
+  await colleagueForm.getByRole('button', { name: 'Cancel', exact: true }).click();
+});
 
 // Browser media is deliberately mocked here. These are automated development checks, not competition evidence.
 async function mediaHarness(page: Page) {

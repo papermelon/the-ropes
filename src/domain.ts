@@ -17,6 +17,7 @@ export const ReviewSchema = z.object({
   kpiInterpretation: z.enum(['context', 'outcome-proof', 'causal-proof']), exceptionReview: z.boolean()
 }).strict();
 export const ReportSchema = z.object({
+  source: z.enum(['fictional', 'user-provided']).optional(),
   id: z.string().max(100), initiative: z.string().min(1).max(160), owner: z.string().max(160), supporting: z.string().max(300), period: z.string().max(100), cadence: z.string().max(100),
   annualCommitment: text, annualAgreement: z.enum(['agreed', 'draft']), annualDue: z.string().max(100),
   milestones: z.array(z.object({ quarter: z.string().max(100), statement: text, agreement: z.enum(['agreed', 'draft', 'missing']), delivery: z.enum(['met', 'missed', 'pending', 'unknown']) }).strict()).min(1).max(4), currentQuarter: z.string().max(100),

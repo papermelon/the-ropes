@@ -2,7 +2,7 @@
 
 The Ropes is a hackathon MVP for transferring expert judgment through **Capture → Map → Teach**. A strategy/performance officer explains how they review an initiative update. An ER-division reporting/planning officer then prepares an unseen update with guidance grounded in the expert's confirmed words and screen evidence. The human roles are complementary.
 
-The problem is simple: a reporting template says which fields to fill, but rarely explains why an experienced officer questions a benchmark, forecast or unsupported status. The Ropes makes that reasoning teachable. All runtime case data is fictional; no organizational policy, data or endorsement is claimed.
+The problem is simple: a reporting template says which fields to fill, but rarely explains why an experienced officer questions a benchmark, forecast or unsupported status. The Ropes makes that reasoning teachable. Built-in cases are fictional; users may enter their own initiative facts. No organizational policy or endorsement is claimed.
 
 ## Run locally
 
@@ -22,9 +22,15 @@ npm start
 
 Then open http://127.0.0.1:8787. Mock mode is the default. It needs no provider keys and remains visibly labelled as simulated. Browser tests also label their simulated media fixtures; neither establishes human voice or learning transfer.
 
+## Your own project
+
+Choose **Use my own project** on the opening screen. Enter the original initiative facts, reporting period, annual commitment, milestones, progress, evidence and dependencies. The form starts blank and validates period links; no sample facts or judgments are copied. Edit source details before recording. For Teach, **Use colleague’s project** accepts a different initiative or reporting period with a blank assessment and fresh consent.
+
+Entered facts stay in the browser until consented recording or explicit private export. Export is available before recording, with deliberate restore later. Enter only information approved for the provider routes shown in consent. This remains an initiative-update pilot using the existing bounded expert-confirmed triggers.
+
 ## The loop
 
-1. **Capture:** an expert reviews a fictional update. Give screen/microphone consent, select only the synthetic workspace and inspect the preview. The apprentice asks at pauses, after typing/speech activity and reading holds permit it. Retain an assessment, reason and screen-linked explanation for each topic; at least three useful questions and a guardrail are required.
+1. **Capture:** an expert reviews a fictional update. Give screen/microphone consent, select only the approved initiative workspace and inspect the preview. The apprentice asks at pauses, after typing/speech activity and reading holds permit it. Retain an assessment, reason and screen-linked explanation for each topic; at least three useful questions and a guardrail are required.
 2. **Map:** answer at least three new debrief questions. In live mode, Claude can draft a coherent cited interpretation from retained same-topic expert words; mock uses labelled extraction. Conditions, exceptions and guardrails require exact supporting passages. All drafts remain editable and unconfirmed. Missing screen links block approval; new judgment needs a supporting demonstration. The expert listens to or reads the labelled teach-back, corrects it and explicitly confirms.
 3. **Teach:** a separate human reporting/planning officer opens an unseen case. Their update starts blank. With fresh consent, they write their own claims and predict what to verify. Before save, a confirmed-rule tutor can raise a relevant concern using the expert's quote and frame. The officer chooses the correction. The result preserves the actual first-checked and saved drafts and remaining uncertainty.
 
@@ -58,11 +64,11 @@ Preview is inspected before transmission. On-record capture stays in browser mem
 
 Private export/import supports deliberate local resume, with schema/reference checks. Imported evidence is labelled historical, does not connect providers, requires fresh consent and does not itself grant whole-map approval. Keep these exports outside public source and sharing services. There is no shared-team persistence or automatic cloud storage of captures.
 
-Local deletion cannot retract material already sent to a provider. Remote deletion, zero retention and automatic screen redaction are not claimed. Share only the fictional workspace. The MVP covers initiative updates and bounded expert-confirmed coaching triggers; arbitrary institutional policy, KPI/dataset coordination, Office/Power BI integration and broad enterprise rollout remain outside scope.
+Local deletion cannot retract material already sent to a provider. Remote deletion, zero retention and automatic screen redaction are not claimed. Share only the initiative workspace approved for provider processing. The MVP covers initiative updates and bounded expert-confirmed coaching triggers; arbitrary institutional policy, KPI/dataset coordination, Office/Power BI integration and broad enterprise rollout remain outside scope.
 
 ## Verification status
 
-The final local `npm run check` passed **lint, typecheck, build, 36 unit/API tests and nine browser tests** after the branding update at 16:49 SGT on 4 October 2026, including cited Map synthesis validation, persistent ledger, private resume and voice relay/teardown checks. Earlier Claude vision, Expressive ElevenAgents audio and Scribe component checks used fictional pixels and synthetic speech. **Human microphone, interruptions, spoken teach-back and independent unseen transfer remain unrun.** Hosted HTTPS health/authentication, authenticated app/status, invalid-Origin rejection and blocked unauthenticated WSS upgrade passed. The complete disk ledger survived a restart with initialization disabled. The user confirmed a fresh Chrome sign-in and homepage. These checks establish hosted access, not successful human voice transport or transfer. The sanitized source and built bundle were scanned before publication. Automated fixtures and synthetic speech do not establish human success.
+The own-project revision passed **lint, typecheck/build, 36 unit/API tests and all ten browser checks**, including private project roundtrip and the colleague handoff, cited Map synthesis, persistent ledger, private resume and voice relay/teardown checks. Earlier Claude vision, Expressive ElevenAgents audio and Scribe component checks used fictional pixels and synthetic speech. **Human microphone, interruptions, spoken teach-back and independent unseen transfer remain unrun.** Hosted HTTPS health/authentication, authenticated app/status, invalid-Origin rejection and blocked unauthenticated WSS upgrade passed. The complete disk ledger survived a restart with initialization disabled. The user confirmed a fresh Chrome sign-in and homepage. These checks establish hosted access, not successful human voice transport or transfer. The sanitized source and built bundle were scanned before publication. Automated fixtures and synthetic speech do not establish human success.
 
 ```sh
 npm run lint
