@@ -5,6 +5,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import WebSocket from 'ws';
 import { trainingReport } from '../src/domain';
 import { AnalysisSchema } from '../src/providers';
+import { MAX_VOICE_SECONDS } from '../src/voice-limits';
 
 if (process.env.SMOKE_APPROVED !== 'true') throw new Error('Synthetic smoke is disabled. Explicit SMOKE_APPROVED=true authorization is required before any network or browser activity.');
 try { process.loadEnvFile('.env'); } catch { /* Secure environment-only setup is supported. */ }
@@ -67,7 +68,7 @@ try {
     let credentials: { agentPath: string; scribePath: string; maxSeconds: number };
     try {
       credentials = await post('/api/session/' + ticket + '/voice', {});
-      if (!Number.isFinite(credentials.maxSeconds) || credentials.maxSeconds <= 0 || credentials.maxSeconds > 120) throw new Error('Invalid bounded relay duration.');
+      if (!Number.isFinite(credentials.maxSeconds) || credentials.maxSeconds <= 0 || credentials.maxSeconds > MAX_VOICE_SECONDS) throw new Error('Invalid bounded relay duration.');
       relayURL(credentials.agentPath); relayURL(credentials.scribePath);
     } catch (error) { result.expressive = 'failed'; throw error; }
     result.expressive = 'passed: server verified authenticated V3 Conversational/Expressive and duration, then issued one-use app relay paths';

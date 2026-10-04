@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import { z } from 'zod';
+import { MAX_VOICE_SECONDS } from './voice-limits';
 
 const AudioSchema = z.object({ message_type: z.literal('input_audio_chunk'), audio_base_64: z.string().regex(/^[A-Za-z0-9+/]*={0,2}$/).max(16384), sample_rate: z.literal(16000), commit: z.boolean().optional() }).strict();
 
@@ -12,7 +13,7 @@ export function relayScribe(client: WebSocket, token: string, maxSeconds: number
     client.close(1000, 'Bounded Scribe session ended'); upstream.close();
     const terminate = setTimeout(() => { client.terminate(); upstream.terminate(); }, 500); terminate.unref();
   };
-  const cancelled = () => stop(); const timer = setTimeout(() => stop('Server voice duration limit reached. Reconnect deliberately.'), Math.min(120, maxSeconds) * 1000);
+  const cancelled = () => stop(); const timer = setTimeout(() => stop('Server voice duration limit reached. Reconnect deliberately.'), Math.min(MAX_VOICE_SECONDS, maxSeconds) * 1000);
   const killCheck = setInterval(() => { void disabled().then(value => { if (value) stop('Live usage is disabled.'); }).catch(() => stop('Live usage configuration could not be verified.')); }, 1000); killCheck.unref();
   signal.addEventListener('abort', cancelled, { once: true }); if (signal.aborted) stop();
   client.on('message', (raw, binary) => {
@@ -23,7 +24,7 @@ export function relayScribe(client: WebSocket, token: string, maxSeconds: number
       if (now - rateAt >= 1000) { rateAt = now; chunks = 0; }
       if (++chunks > 8) throw new Error('Audio rate exceeded.');
       bytes += Buffer.from(data.audio_base_64, 'base64').length;
-      if (bytes > 32000 * Math.min(120, maxSeconds) || upstream.bufferedAmount > 160000) throw new Error('Audio bound exceeded.');
+      if (bytes > 32000 * Math.min(MAX_VOICE_SECONDS, maxSeconds) || upstream.bufferedAmount > 160000) throw new Error('Audio bound exceeded.');
       const message = JSON.stringify(data);
       if (upstream.readyState === WebSocket.OPEN) upstream.send(message); else if (pending.length < 8 && upstream.readyState === WebSocket.CONNECTING) pending.push(message); else throw new Error('Scribe is unavailable.');
     } catch { stop('Invalid or excessive audio input. Stop and reconnect deliberately.'); }

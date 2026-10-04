@@ -85,7 +85,7 @@ test('stop releases capture synchronously and late cleanup cannot close replacem
   await adapter.stop();
 });
 
-test('relay transport is same-host HTTPS and the 120-second clamp stops audio and ignores late transcripts', async t => {
+test('relay transport is same-host HTTPS and the five-minute clamp stops audio and ignores late transcripts', async t => {
   const mic = microphone(); const states: VoiceState[] = []; const transcripts: string[] = []; const failures: string[] = [];
   const surfaces = browser(t, async () => mic.stream); const session = conversation();
   const events: string[] = []; let interruption: (() => void) | undefined;
@@ -103,7 +103,8 @@ test('relay transport is same-host HTTPS and the 120-second clamp stops audio an
   interruption?.(); assert.deepEqual(events, ['interrupted']);
   surfaces.sockets[0].onmessage?.({ data: JSON.stringify({ message_type: 'committed_transcript', text: 'TEST retained speech' }) });
   assert.deepEqual(transcripts, ['TEST retained speech']);
-  t.mock.timers.tick(119999); assert.equal(mic.track.readyState, 'live');
+  t.mock.timers.tick(120000); assert.equal(mic.track.readyState, 'live', 'the old two-minute cutoff must not end a longer session');
+  t.mock.timers.tick(179999); assert.equal(mic.track.readyState, 'live');
   t.mock.timers.tick(1); assert.equal(mic.track.readyState, 'ended'); assert.equal(surfaces.sockets[0].closed, 1);
   surfaces.sockets[0].onmessage?.({ data: JSON.stringify({ message_type: 'committed_transcript', text: 'TEST late speech must be ignored' }) });
   interruption?.(); assert.deepEqual(events, ['interrupted']);

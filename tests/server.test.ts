@@ -8,6 +8,31 @@ import WebSocket, { WebSocketServer } from 'ws';
 import { makeServer } from '../src/server';
 import { trainingReport } from '../src/domain';
 
+test('five-minute voice configuration is clamped, reserved proportionally and returned without provider credentials', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'apprentice-long-voice-api-'));
+  const values = { ANTHROPIC_API_KEY: 'test-only-claude', ELEVENLABS_API_KEY: 'test-only-elevenlabs', ELEVENLABS_AGENT_ID: 'agent_test', LIVE_USAGE_APPROVED: 'true', LIVE_USAGE_DISABLED: 'false', PROVIDER_TOTAL_CAP_USD: '10', MAX_LIVE_VOICE_SECONDS: '999', BUDGET_KILL_SWITCH_PATH: join(directory, 'disabled') };
+  const old = Object.keys(values).map(key => process.env[key]); Object.entries(values).forEach(([key, value]) => { process.env[key] = value; });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input); if (!url.startsWith('https://api.elevenlabs.io/')) return originalFetch(input, init);
+    if (url.includes('get-signed-url')) return Response.json({ signed_url: 'wss://TEST.invalid' });
+    if (url.includes('single-use-token')) return Response.json({ token: 'TEST_FAKE_SCRIBE' });
+    return Response.json({ platform_settings: { auth: { enable_auth: true, allowlist: [] } }, conversation_config: { tts: { model_id: 'eleven_v3_conversational', expressive_mode: true }, conversation: { max_duration_seconds: 300 } } });
+  };
+  const server = makeServer({ ledgerPath: join(directory, 'budget.json'), initializeBudget: true });
+  try {
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address(); assert.ok(address && typeof address !== 'string'); const base = `http://127.0.0.1:${address.port}`;
+    const post = (path: string) => fetch(base + path, { method: 'POST', headers: { Origin: base, 'Content-Type': 'application/json' }, body: path === '/api/session' ? JSON.stringify({ mode: 'live', consent: true }) : '{}' });
+    const { id } = await (await post('/api/session')).json();
+    const credentials = await (await post(`/api/session/${id}/voice`)).json(); assert.equal(credentials.maxSeconds, 300); assert.doesNotMatch(JSON.stringify(credentials), /TEST_FAKE_SCRIBE|TEST.invalid/);
+    const status = await (await fetch(base + '/api/status')).json(); assert.equal(status.maxVoiceSeconds, 300); assert.equal(status.committedUSD, 4.3); assert.equal(status.remainingUSD, 5.7); assert.equal(status.liveRequests, 1); assert.equal(status.maxRequests, 8);
+  } finally {
+    server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); globalThis.fetch = originalFetch;
+    Object.keys(values).forEach((key, i) => { if (old[i] === undefined) delete process.env[key]; else process.env[key] = old[i]; }); await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('local API enforces consent, origin, active tickets, validation and explicit mock/live separation', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'apprentice-server-'));
   const server = makeServer({ ledgerPath: join(directory, 'budget.json'), initializeBudget: true }); await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));

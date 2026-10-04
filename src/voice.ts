@@ -1,5 +1,6 @@
 import type { Conversation } from '@elevenlabs/client';
 import { PrivacyGate, type VoiceEvent } from './domain';
+import { MAX_VOICE_SECONDS } from './voice-limits';
 
 export type VoiceState = 'listening' | 'processing' | 'speaking' | 'paused' | 'off-record' | 'disconnected';
 export class LiveVoice {
@@ -28,7 +29,7 @@ export class LiveVoice {
     if (!this.stream || !this.context || !this.stream.getAudioTracks().some(t => t.readyState === 'live')) await this.prepareMicrophone();
     const epoch = this.gate.begin();
     const accept = () => this.gate.accepts(epoch);
-    this.timer = setTimeout(() => { if (accept()) { this.failure('Voice duration limit reached. Your pending answer is retained; reconnect deliberately.'); void this.stop(); } }, Math.min(120, credentials.maxSeconds) * 1000);
+    this.timer = setTimeout(() => { if (accept()) { this.failure('Voice duration limit reached. Your pending answer is retained; reconnect deliberately.'); void this.stop(); } }, Math.min(MAX_VOICE_SECONDS, credentials.maxSeconds) * 1000);
     try {
       const { Conversation } = await import('@elevenlabs/client');
       if (!accept()) return;

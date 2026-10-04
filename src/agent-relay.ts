@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import { z } from 'zod';
+import { MAX_VOICE_SECONDS } from './voice-limits';
 
 const empty = z.object({}).strict();
 const InitSchema = z.object({ type: z.literal('conversation_initiation_client_data'), conversation_config_override: z.object({ agent: empty.optional(), tts: empty.optional(), conversation: z.object({ text_only: z.literal(false).optional() }).strict().optional() }).strict().optional(), source_info: z.object({ source: z.literal('js_sdk'), version: z.string().max(30) }).strict().optional() }).strict();
@@ -21,7 +22,7 @@ export function relayAgent(client: WebSocket, signedUrl: string, maxSeconds: num
     client.close(1000, 'Bounded Agent session ended'); upstream.close();
     const terminate = setTimeout(() => { client.terminate(); upstream.terminate(); }, 500); terminate.unref();
   };
-  const cancelled = () => stop(); const timer = setTimeout(() => stop('Server voice duration limit reached. Reconnect deliberately.'), Math.min(120, maxSeconds) * 1000);
+  const cancelled = () => stop(); const timer = setTimeout(() => stop('Server voice duration limit reached. Reconnect deliberately.'), Math.min(MAX_VOICE_SECONDS, maxSeconds) * 1000);
   const killCheck = setInterval(() => { void disabled().then(value => { if (value) stop('Live usage is disabled.'); }).catch(() => stop('Live usage configuration could not be verified.')); }, 1000); killCheck.unref();
   signal.addEventListener('abort', cancelled, { once: true }); if (signal.aborted) stop();
   client.on('message', (raw, binary) => {
@@ -32,7 +33,7 @@ export function relayAgent(client: WebSocket, signedUrl: string, maxSeconds: num
       if (now - rateAt >= 1000) { rateAt = now; messages = 0; } if (++messages > 40) throw new Error('Message rate exceeded.');
       if ('type' in data && data.type === 'conversation_initiation_client_data') { if (initialized) throw new Error('Repeated initialization.'); initialized = true; }
       else if (!initialized) throw new Error('Initialization is required.');
-      if ('user_audio_chunk' in data) { audioBytes += Buffer.from(data.user_audio_chunk, 'base64').length; if (audioBytes > 96000 * Math.min(120, maxSeconds)) throw new Error('Audio bound exceeded.'); }
+      if ('user_audio_chunk' in data) { audioBytes += Buffer.from(data.user_audio_chunk, 'base64').length; if (audioBytes > 96000 * Math.min(MAX_VOICE_SECONDS, maxSeconds)) throw new Error('Audio bound exceeded.'); }
       if ('text' in data) { contextBytes += Buffer.byteLength(data.text); if (contextBytes > 512000) throw new Error('Context bound exceeded.'); }
       if ('type' in data && (data.type === 'user_message' && ++questions > 16 || data.type === 'contextual_update' && ++updates > 16)) throw new Error('Grounded turn bound exceeded.');
       if (upstream.bufferedAmount > 512000) throw new Error('Backpressure bound exceeded.');

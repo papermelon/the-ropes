@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { z } from 'zod';
+import { DEFAULT_VOICE_SECONDS, MAX_VOICE_SECONDS } from './voice-limits';
 
 const EntrySchema = z.object({ id: z.string(), kind: z.enum(['historical', 'reason', 'map', 'voice']), at: z.string(), reservedUSD: z.number().finite().nonnegative(), actualUSD: z.number().finite().nonnegative().nullable(), state: z.enum(['held', 'released', 'reconciled']), note: z.string(), voiceLeaseUntil: z.number().nonnegative().optional(), knownWithinHoldUSD: z.number().finite().nonnegative().optional() }).strict().refine(entry => (entry.knownWithinHoldUSD || 0) <= entry.reservedUSD, 'Known charge cannot exceed the retained hold.');
 const LedgerSchema = z.object({ version: z.literal(1), approvedCapUSD: z.number().finite().nonnegative(), liveRequests: z.number().int().nonnegative(), entries: z.array(EntrySchema), capChanges: z.array(z.object({ at: z.string(), fromUSD: z.number(), toUSD: z.number() }).strict()) }).strict();
@@ -54,13 +55,13 @@ export class BudgetLedger {
     return { approvedCapUSD: data.approvedCapUSD, committedUSD, knownActualUSD, unknownHeldUSD, remainingUSD: Math.max(0, money(data.approvedCapUSD - committedUSD)), liveRequests: data.liveRequests };
   }
   snapshot() { return this.serial(async () => this.summarize(await this.load())); }
-  reserve(kind: 'reason' | 'map' | 'voice', amountUSD: number, maxRequests: number, voiceSeconds = 120, maxVoiceConcurrency = 1) {
+  reserve(kind: 'reason' | 'map' | 'voice', amountUSD: number, maxRequests: number, voiceSeconds = DEFAULT_VOICE_SECONDS, maxVoiceConcurrency = 1) {
     return this.serial(async () => {
       const data = await this.load(); const snapshot = this.summarize(data);
       if (data.liveRequests >= maxRequests || money(snapshot.committedUSD + amountUSD) > data.approvedCapUSD) throw new Error('Approved cumulative live usage bound reached. Reconcile provider charges or obtain additional approval; restarting cannot reset it.');
       if (kind === 'voice' && data.entries.filter(entry => entry.kind === 'voice' && entry.state === 'held' && (entry.voiceLeaseUntil || 0) > Date.now()).length >= maxVoiceConcurrency) throw new Error('A bounded voice reservation is already active. Stop its session or wait for the bound before reconnecting.');
       const id = crypto.randomUUID(); data.liveRequests++;
-      data.entries.push({ id, kind, at: new Date().toISOString(), reservedUSD: amountUSD, actualUSD: null, state: 'held', note: 'Conservative reservation; actual provider charges remain unknown until reconciled.', ...(kind === 'voice' ? { voiceLeaseUntil: Date.now() + Math.min(120, voiceSeconds) * 1000 } : {}) });
+      data.entries.push({ id, kind, at: new Date().toISOString(), reservedUSD: amountUSD, actualUSD: null, state: 'held', note: 'Conservative reservation; actual provider charges remain unknown until reconciled.', ...(kind === 'voice' ? { voiceLeaseUntil: Date.now() + Math.min(MAX_VOICE_SECONDS, voiceSeconds) * 1000 } : {}) });
       await this.save(); return id;
     });
   }

@@ -10,6 +10,7 @@ import { topics, type Mode } from './domain';
 import { BudgetLedger, type BudgetSnapshot } from './budget';
 import { relayScribe } from './scribe-relay';
 import { relayAgent } from './agent-relay';
+import { DEFAULT_VOICE_SECONDS, MAX_VOICE_SECONDS } from './voice-limits';
 
 try { process.loadEnvFile('.env'); } catch { /* Environment-only setup is supported. */ }
 type Ticket = { mode: Mode; active: boolean; controllers: Set<AbortController>; voiceControllers: Set<AbortController>; expires: number; voiceReservation?: string; agentUrl?: string; agentUsed?: boolean; scribeToken?: string; scribeUsed?: boolean; voiceExpires?: number; voiceMaxSeconds?: number; voiceStartedAt?: number };
@@ -22,7 +23,7 @@ function readiness(budget: BudgetSnapshot, disabled: boolean) {
   const configuredCap = Number(process.env.PROVIDER_TOTAL_CAP_USD || process.env.PROVIDER_USAGE_CAP_USD);
   return { claude: !!process.env.ANTHROPIC_API_KEY, elevenlabs: !!process.env.ELEVENLABS_API_KEY, agent: !!process.env.ELEVENLABS_AGENT_ID,
     approved: !disabled && process.env.LIVE_USAGE_APPROVED === 'true' && Number.isFinite(configuredCap) && configuredCap > 0,
-    disabled, maxRequests: Math.min(8, Math.max(1, Number(process.env.MAX_LIVE_REQUESTS) || 8)), maxVoiceSeconds: Math.min(120, Math.max(10, Number(process.env.MAX_LIVE_VOICE_SECONDS) || 120)),
+    disabled, maxRequests: Math.min(8, Math.max(1, Number(process.env.MAX_LIVE_REQUESTS) || 8)), maxVoiceSeconds: Math.min(MAX_VOICE_SECONDS, Math.max(10, Number(process.env.MAX_LIVE_VOICE_SECONDS) || DEFAULT_VOICE_SECONDS)),
     ...budget, reservedUSD: budget.committedUSD };
 }
 function send(res: ServerResponse, status: number, body: unknown) {
@@ -133,7 +134,7 @@ export function makeServer(options: { ledgerPath?: string; initialHeldUSD?: numb
             if (cc.tts.expressive_mode !== true) throw new Error('Enable Expressive mode for the published V3 Conversational agent before connecting.');
             const maxSeconds = (await currentReadiness()).maxVoiceSeconds;
             if (!Number.isFinite(cc.conversation?.max_duration_seconds) || Number(cc.conversation?.max_duration_seconds) > maxSeconds || Number(cc.conversation?.max_duration_seconds) < 1) throw new Error(`Published agent Max conversation duration must be at most ${maxSeconds} seconds. Configure Call limits securely in ElevenLabs before connecting.`);
-            const reservation = await reserve('voice', 1);
+            const reservation = await reserve('voice', Math.max(1, maxSeconds / DEFAULT_VOICE_SECONDS));
             try {
               const signed = await eleven(`/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(process.env.ELEVENLABS_AGENT_ID || '')}`, controller.signal);
               const scribe = await eleven('/v1/single-use-token/realtime_scribe', controller.signal, 'POST');
@@ -183,7 +184,7 @@ export function makeServer(options: { ledgerPath?: string; initialHeldUSD?: numb
       const credential = isAgent ? ticket.agentUrl! : ticket.scribeToken!;
       if (isAgent) { ticket.agentUsed = true; ticket.agentUrl = undefined; } else { ticket.scribeUsed = true; ticket.scribeToken = undefined; }
       ticket.voiceStartedAt ||= Date.now();
-      const seconds = Math.max(0, (ticket.voiceStartedAt + (ticket.voiceMaxSeconds || 120) * 1000 - Date.now()) / 1000);
+      const seconds = Math.max(0, (ticket.voiceStartedAt + (ticket.voiceMaxSeconds || DEFAULT_VOICE_SECONDS) * 1000 - Date.now()) / 1000);
       sockets.handleUpgrade(req, socket, head, client => {
         const controller = new AbortController(); ticket.controllers.add(controller); ticket.voiceControllers.add(controller);
         if (isAgent) relayAgent(client, credential, seconds, controller.signal, disabled, options.agentConnect, origin); else relayScribe(client, credential, seconds, controller.signal, disabled, options.scribeConnect);

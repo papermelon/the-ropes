@@ -30,3 +30,17 @@ test('concurrent reservations and voice leases remain bounded across restart; co
     await assert.rejects(new BudgetLedger(join(directory, 'missing.json'), () => 10, 1.8, 0.026787, false).snapshot(), /ledger is missing/);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
+
+test('five-minute voice lease survives restart and does not expire at the old two-minute bound', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'apprentice-long-voice-')); const path = join(directory, 'ledger.json');
+  let now = Date.now(); t.mock.method(Date, 'now', () => now);
+  try {
+    let ledger = new BudgetLedger(path, () => 10, 1.8, 0.031261, true);
+    await ledger.reserve('voice', 2.5, 8, 300);
+    now += 120001; ledger = new BudgetLedger(path, () => 10);
+    await assert.rejects(ledger.reserve('voice', 2.5, 8, 300), /voice reservation is already active/);
+    assert.equal((await ledger.snapshot()).committedUSD, 4.3);
+    now += 180000; await ledger.reserve('voice', 2.5, 8, 300);
+    assert.equal((await ledger.snapshot()).committedUSD, 6.8);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
