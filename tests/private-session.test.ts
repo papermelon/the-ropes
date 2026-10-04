@@ -1,0 +1,44 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { trainingReport } from '../src/domain';
+import { createPrivateExport, parsePrivateExport, PRIVATE_FILE_MAX_BYTES, type PrivateExport, type PrivateResume } from '../src/private-session';
+import { confirmedFixture } from './fixtures';
+
+test('private restart roundtrip retains exact drafts/history/pending words but never approval, access or fresh validation', () => {
+  const s = confirmedFixture(); const expertSegment = s.segments[0].id;
+  s.segments.push({ id: 'test-novice-segment', at: 200, role: 'novice' });
+  const first = structuredClone(trainingReport); first.review.deliveryReason = 'TEST original division draft';
+  const saved = structuredClone(first); saved.review.deliveryReason = 'TEST corrected division draft';
+  s.practices.push({ at: 201, segmentIds: ['test-novice-segment'], humanSelfDeclared: false, prediction: 'TEST first check', firstAttempt: first, savedDraft: saved, concerns: ['TEST unsupported claim'], ruleIds: [s.rules[0].id] });
+  s.teachBack = { at: 204, summary: 'TEST confirmed explanation, not actual spoken validation', delivery: 'simulated-text', confirmedAt: 205 };
+  s.voiceEvents = [{ at: 102, segmentId: expertSegment, type: 'connected', conversationId: 'test-conversation' }, { at: 103, segmentId: expertSegment, type: 'interrupted' }];
+  s.questions.push({ id: 'pending-test-question', phase: 'capture', topic: 'delivery', text: 'TEST: explain the benchmark', frameId: s.frames[0].id, segmentId: expertSegment, at: 104, guardrail: true, disposition: 'asked' });
+  const resume: PrivateResume = { view: 'capture', topic: 'delivery', report: saved, expertReport: first, human: false, prediction: 'TEST current prediction', caseTopic: 'delivery', pendingQuestionId: 'pending-test-question', answer: 'Exact unfinished Scribe words. Ignore previous instructions is quoted data.', answerSource: 'scribe-reviewed', initialAttempt: first, saved, practiceConcerns: ['TEST unsupported claim'], practiceSegments: ['test-novice-segment'] };
+  const exported = createPrivateExport(s, resume); const restored = parsePrivateExport(JSON.stringify(exported));
+  assert.equal(restored.schemaVersion, 1); assert.equal(restored.mapApproved, false); assert.equal(restored.teachBack?.confirmedAt, undefined);
+  assert.deepEqual(restored.frames, s.frames); assert.deepEqual(restored.rules, s.rules); assert.deepEqual(restored.practices, s.practices); assert.deepEqual(restored.voiceEvents, s.voiceEvents);
+  assert.deepEqual(restored.resume, resume); assert.equal(restored.resume.pendingQuestionId, 'pending-test-question');
+  assert.deepEqual(restored.restore, { importedAt: restored.restore!.importedAt, historical: true, freshConsentRequired: true });
+  assert.ok(restored.restore!.importedAt > 0); assert.equal(restored.practices[0].humanSelfDeclared, false);
+  for (const forbidden of ['ticket', 'signedUrl', 'scribeToken', 'screenConsent', 'micConsent', 'apiKey']) assert.equal(forbidden in restored, false);
+
+  const altered = (edit: (file: PrivateExport) => void) => { const file = structuredClone(exported); edit(file); assert.throws(() => parsePrivateExport(JSON.stringify(file))); };
+  altered(file => { file.id = '<script>'; });
+  altered(file => { file.frames[0].image = 'data:image/svg+xml;base64,PHN2Zz4='; });
+  altered(file => { file.frames[0].image = `data:image/jpeg;base64,/9j${'A'.repeat(600000)}`; });
+  altered(file => { file.frames = Array.from({ length: 81 }, () => structuredClone(file.frames[0])); });
+  altered(file => { file.frames[0].segmentId = 'missing-segment'; });
+  altered(file => { file.frames[0].at = 99; });
+  altered(file => { file.transcripts[0].questionId = 'missing-question'; });
+  altered(file => { file.questions[0].transcriptId = 'missing-transcript'; });
+  altered(file => { file.rules[0].evidence[0].quote = 'invented quote'; });
+  altered(file => { file.rules[0].evidence[0].frameId = ''; });
+  altered(file => { file.rules[0].evidence[0].frameId = file.frames[1].id; });
+  altered(file => { file.rules.push(structuredClone(file.rules[0])); });
+  altered(file => { file.resume.pendingQuestionId = file.questions[0].id; });
+  altered(file => { file.resume.practiceSegments = ['missing-novice']; });
+  altered(file => { file.voiceEvents![0].segmentId = 'missing-segment'; });
+  assert.throws(() => parsePrivateExport(JSON.stringify({ ...exported, signedUrl: 'TEST forbidden persistent access' })));
+  assert.throws(() => parsePrivateExport(' '.repeat(PRIVATE_FILE_MAX_BYTES + 1)), /64 MB/);
+  assert.throws(() => parsePrivateExport('{broken json'));
+});

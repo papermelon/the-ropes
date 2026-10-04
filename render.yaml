@@ -1,0 +1,60 @@
+# Deployment template only. No credentials or billable-use approval are embedded.
+# Complete account/terms and secure environment setup before deploying.
+services:
+  - type: web
+    name: rbm-apprentice
+    runtime: node
+    region: singapore
+    plan: 0.5c-512mb
+    numInstances: 1
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    disk:
+      name: apprentice-budget
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 22.x
+      - key: HOST
+        value: 0.0.0.0
+      - key: PUBLIC_DEMO
+        value: "true"
+      - key: ALLOWED_HOSTS
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: DEMO_ACCESS_USER
+        sync: false
+      - key: DEMO_ACCESS_PASSWORD
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-5-5
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_AGENT_ID
+        sync: false
+      - key: BUDGET_LEDGER_PATH
+        value: /var/data/provider-usage-ledger.json
+      - key: BUDGET_KILL_SWITCH_PATH
+        value: /var/data/live.disabled
+      - key: BUDGET_INITIALIZE_ALLOWED
+        value: "false"
+      - key: PROVIDER_TOTAL_CAP_USD
+        value: "10"
+      - key: LIVE_USAGE_APPROVED
+        value: "false"
+      - key: LIVE_USAGE_DISABLED
+        value: "true"
+      - key: MAX_LIVE_REQUESTS
+        value: "8"
+      - key: MAX_LIVE_VOICE_SECONDS
+        value: "120"
+      - key: MAX_LIVE_CONCURRENCY
+        value: "1"
+      - key: MAX_API_REQUESTS_PER_MINUTE
+        value: "60"

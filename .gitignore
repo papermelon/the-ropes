@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+tmp/
+test-results/
+playwright-report/
+private-captures/
+*.pdf
+.DS_Store
