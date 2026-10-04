@@ -1,8 +1,8 @@
-# Apprentice · Better division inputs
+# The Ropes · Better division inputs
 
-A hackathon MVP for transferring expert judgment through **Capture → Map → Teach**. A strategy/performance officer explains how they review an initiative update. An ER-division reporting/planning officer then prepares an unseen update with guidance grounded in the expert's confirmed words and screen evidence. The human roles are complementary.
+The Ropes is a hackathon MVP for transferring expert judgment through **Capture → Map → Teach**. A strategy/performance officer explains how they review an initiative update. An ER-division reporting/planning officer then prepares an unseen update with guidance grounded in the expert's confirmed words and screen evidence. The human roles are complementary.
 
-The problem is simple: a reporting template says which fields to fill, but rarely explains why an experienced officer questions a benchmark, forecast or unsupported status. Apprentice makes that reasoning teachable. All runtime case data is fictional; no organizational policy, data or endorsement is claimed.
+The problem is simple: a reporting template says which fields to fill, but rarely explains why an experienced officer questions a benchmark, forecast or unsupported status. The Ropes makes that reasoning teachable. All runtime case data is fictional; no organizational policy, data or endorsement is claimed.
 
 ## Run locally
 

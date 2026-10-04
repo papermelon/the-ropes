@@ -41,7 +41,7 @@ test('off-record reconnect and explicit private restore preserve the pending ans
   await expect(page.getByLabel('Expert answer · exact words')).toHaveValue(exactWords);
   await expect(page.getByRole('button', { name: 'Keep this explanation' })).toBeDisabled();
   await page.getByRole('button', { name: 'Reconnect screen', exact: true }).click();
-  const setup = page.getByRole('dialog', { name: 'Let your apprentice observe' });
+  const setup = page.getByRole('dialog', { name: 'Let The Ropes observe' });
   await expect(setup.getByLabel('I consent to selected screen')).not.toBeChecked();
   await expect(setup.getByLabel('I consent to microphone')).not.toBeChecked();
   await share(page);
@@ -54,7 +54,7 @@ test('off-record reconnect and explicit private restore preserve the pending ans
 test('repeated start clicks create one segment and rolling capture retains cited frames beyond the 80-frame window', async ({ page }) => {
   await page.clock.install(); await mediaHarness(page); await consent(page);
   let starts = 0; page.on('request', request => { if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/session') starts++; });
-  const setup = page.getByRole('dialog', { name: 'Let your apprentice observe' });
+  const setup = page.getByRole('dialog', { name: 'Let The Ropes observe' });
   await setup.getByRole('button', { name: 'Share review workspace' }).click();
   await setup.getByLabel('This preview shows only').check();
   await setup.getByRole('button', { name: 'Start on record' }).dblclick();
@@ -98,7 +98,7 @@ async function consent(page: Page) {
   await page.getByLabel('I consent to selected screen').check();
 }
 async function share(page: Page) {
-  const setup = page.getByRole('dialog', { name: 'Let your apprentice observe' });
+  const setup = page.getByRole('dialog', { name: 'Let The Ropes observe' });
   if (!(await setup.isVisible())) await page.getByRole('button', { name: /Set up screen & voice|^Reconnect screen$/ }).click();
   if (await page.getByRole('region', { name: 'Division update draft' }).count()) { await expect(setup.getByLabel('I consent to selected screen')).not.toBeChecked(); await expect(setup.getByLabel('I consent to microphone')).not.toBeChecked(); }
   await setup.getByLabel('I consent to selected screen').check();
@@ -266,7 +266,7 @@ test('consent denial and not-ready state are visible; no implicit seeded rules',
   await page.reload(); await consent(page);
   await page.getByRole('button', { name: 'Share review workspace' }).click();
   await expect(page.locator('.notice')).toContainText('Test permission denied');
-  await page.getByRole('button', { name: 'Close Let your apprentice observe' }).click();
+  await page.getByRole('button', { name: 'Close Let The Ropes observe' }).click();
   await sessionAction(page, 'Map the judgment');
   await expect(page.getByRole('heading', { name: 'Show me your reasoning first.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Return to the expert review' })).toBeVisible();

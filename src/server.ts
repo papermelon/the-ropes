@@ -79,7 +79,7 @@ export function makeServer(options: { ledgerPath?: string; initialHeldUSD?: numb
       if (url.pathname === '/api/health' && req.method === 'GET') { send(res, 200, { healthy: true }); return; }
       if (publicDemo) {
         const supplied = Buffer.from(req.headers.authorization || '');
-        if (supplied.length !== expectedAuth.length || !timingSafeEqual(supplied, expectedAuth)) { if (!takeRate(`auth:${req.socket.remoteAddress || 'unknown'}`, 10)) { send(res, 429, { error: 'Access attempt limit reached. Pause before retrying.' }); return; } res.setHeader('www-authenticate', 'Basic realm="Apprentice private demo", charset="UTF-8"'); send(res, 401, { error: 'Demo access credentials are required.' }); return; }
+        if (supplied.length !== expectedAuth.length || !timingSafeEqual(supplied, expectedAuth)) { if (!takeRate(`auth:${req.socket.remoteAddress || 'unknown'}`, 10)) { send(res, 429, { error: 'Access attempt limit reached. Pause before retrying.' }); return; } res.setHeader('www-authenticate', 'Basic realm="The Ropes private demo", charset="UTF-8"'); send(res, 401, { error: 'Demo access credentials are required.' }); return; }
       }
       const origin = req.headers.origin || '';
       const localOrigins = [`http://${host}`, 'http://localhost:5184', 'http://127.0.0.1:5184'];
