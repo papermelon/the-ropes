@@ -197,5 +197,5 @@ export function makeServer(options: { ledgerPath?: string; initialHeldUSD?: numb
 if (process.argv[1]?.endsWith('server.ts')) {
   const port = Number(process.env.PORT) || 8787;
   const host = process.env.HOST || '127.0.0.1';
-  makeServer().listen(port, host, () => console.log(`Apprentice API listening on configured host, port ${port} · simulated providers by default`));
+  makeServer().listen(port, host, () => console.log(`HTTP and WebSocket service listening on configured host, port ${port} · simulated providers by default`));
 }
