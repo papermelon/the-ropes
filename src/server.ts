@@ -46,6 +46,9 @@ async function eleven(path: string, signal: AbortSignal, method = 'GET') {
 }
 export function makeServer(options: { ledgerPath?: string; initialHeldUSD?: number; knownHistoricalUSD?: number; initializeBudget?: boolean; scribeConnect?: (token: string) => WebSocket; agentConnect?: (signedUrl: string, origin?: string) => WebSocket } = {}) {
   const publicDemo = process.env.PUBLIC_DEMO === 'true';
+  const openUntil = Date.parse(process.env.DEMO_OPEN_UNTIL || '');
+  if (process.env.DEMO_OPEN_UNTIL && !z.iso.datetime({ offset: true }).safeParse(process.env.DEMO_OPEN_UNTIL).success) throw new Error('DEMO_OPEN_UNTIL must be an ISO expiry date with a timezone.');
+  function openAccess() { return publicDemo && Date.now() < openUntil; }
   const allowedHosts = (process.env.ALLOWED_HOSTS || '').split(',').map(host => host.trim().toLowerCase()).filter(Boolean);
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(origin => origin.trim()).filter(Boolean);
   const accessUser = process.env.DEMO_ACCESS_USER || ''; const accessPassword = process.env.DEMO_ACCESS_PASSWORD || '';
@@ -78,7 +81,7 @@ export function makeServer(options: { ledgerPath?: string; initialHeldUSD?: numb
       const url = new URL(req.url || '/', `http://${host}`);
       if (publicDemo && req.headers['x-forwarded-proto'] !== 'https') { send(res, 403, { error: 'HTTPS is required behind the configured hosting proxy.' }); return; }
       if (url.pathname === '/api/health' && req.method === 'GET') { send(res, 200, { healthy: true }); return; }
-      if (publicDemo) {
+      if (publicDemo && !openAccess()) {
         const supplied = Buffer.from(req.headers.authorization || '');
         if (supplied.length !== expectedAuth.length || !timingSafeEqual(supplied, expectedAuth)) { if (!takeRate(`auth:${req.socket.remoteAddress || 'unknown'}`, 10)) { send(res, 429, { error: 'Access attempt limit reached. Pause before retrying.' }); return; } res.setHeader('www-authenticate', 'Basic realm="The Ropes private demo", charset="UTF-8"'); send(res, 401, { error: 'Demo access credentials are required.' }); return; }
       }
@@ -88,7 +91,7 @@ export function makeServer(options: { ledgerPath?: string; initialHeldUSD?: numb
       if (url.pathname.startsWith('/api/') && req.method === 'POST') {
         if (!takeRate(`api:${req.socket.remoteAddress || 'unknown'}`, rateLimit)) { send(res, 429, { error: 'API rate limit reached. Pause before retrying.' }); return; }
       }
-      if (url.pathname === '/api/status') { send(res, 200, { ...await currentReadiness(), defaultMode: 'mock', liveVerified: false }); return; }
+      if (url.pathname === '/api/status') { send(res, 200, { ...await currentReadiness(), openAccessUntil: openAccess() ? new Date(openUntil).toISOString() : null, defaultMode: 'mock', liveVerified: false }); return; }
       if (url.pathname === '/api/session' && req.method === 'POST') {
         const data = z.object({ mode: z.enum(['mock', 'live']), consent: z.literal(true) }).strict().parse(await json(req));
         if (data.mode === 'live' && !(await currentReadiness()).approved) throw new Error('Approve a usage cap in secure local settings before live mode; verify the kill switch.');
@@ -174,7 +177,8 @@ export function makeServer(options: { ledgerPath?: string; initialHeldUSD?: numb
       const host = req.headers.host || ''; const origin = req.headers.origin || '';
       const hostAllowed = allowedHosts.length ? allowedHosts.includes(host.toLowerCase()) : !publicDemo && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host);
       const originAllowed = allowedOrigins.length ? allowedOrigins.includes(origin) : !publicDemo && [`http://${host}`, 'http://localhost:5184', 'http://127.0.0.1:5184'].includes(origin);
-      const auth = Buffer.from(req.headers.authorization || ''); const authenticated = !publicDemo || auth.length === expectedAuth.length && timingSafeEqual(auth, expectedAuth);
+      const auth = Buffer.from(req.headers.authorization || ''); const credentialValid = auth.length === expectedAuth.length && timingSafeEqual(auth, expectedAuth);
+      const authenticated = !publicDemo || openAccess() || credentialValid;
       const pathname = new URL(req.url || '/', `http://${host}`).pathname;
       const route = pathname.match(/^\/api\/session\/([a-f0-9-]+)\/(scribe|agent)$/); const ticket = route && tickets.get(route[1]);
       const isAgent = route?.[2] === 'agent';
@@ -184,7 +188,7 @@ export function makeServer(options: { ledgerPath?: string; initialHeldUSD?: numb
       const credential = isAgent ? ticket.agentUrl! : ticket.scribeToken!;
       if (isAgent) { ticket.agentUsed = true; ticket.agentUrl = undefined; } else { ticket.scribeUsed = true; ticket.scribeToken = undefined; }
       ticket.voiceStartedAt ||= Date.now();
-      const seconds = Math.max(0, (ticket.voiceStartedAt + (ticket.voiceMaxSeconds || DEFAULT_VOICE_SECONDS) * 1000 - Date.now()) / 1000);
+      const seconds = Math.max(0, (Math.min(ticket.voiceStartedAt + (ticket.voiceMaxSeconds || DEFAULT_VOICE_SECONDS) * 1000, publicDemo && !credentialValid ? openUntil : Infinity) - Date.now()) / 1000);
       sockets.handleUpgrade(req, socket, head, client => {
         const controller = new AbortController(); ticket.controllers.add(controller); ticket.voiceControllers.add(controller);
         if (isAgent) relayAgent(client, credential, seconds, controller.signal, disabled, options.agentConnect, origin); else relayScribe(client, credential, seconds, controller.signal, disabled, options.scribeConnect);

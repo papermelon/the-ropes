@@ -10,7 +10,7 @@ import { ProjectForm } from './project';
 import './style.css';
 
 type View = 'capture' | 'map' | 'teach';
-type Status = { claude: boolean; elevenlabs: boolean; agent: boolean; approved: boolean; liveRequests: number; maxRequests: number; maxVoiceSeconds: number; approvedCapUSD: number; committedUSD: number; knownActualUSD: number; unknownHeldUSD: number; remainingUSD: number; disabled: boolean };
+type Status = { claude: boolean; elevenlabs: boolean; agent: boolean; approved: boolean; liveRequests: number; maxRequests: number; maxVoiceSeconds: number; approvedCapUSD: number; committedUSD: number; knownActualUSD: number; unknownHeldUSD: number; remainingUSD: number; disabled: boolean; openAccessUntil?: string | null };
 const rootPath = '/api/session/';
 async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal });
@@ -331,6 +331,7 @@ function App() {
     <main id="main" className={!started ? 'welcome' : 'guided-session'}>
       {!started ? <section className="welcome-scene">
         <div className="welcome-copy"><div className="eyebrow">FOR STRATEGY & PERFORMANCE TEAMS</div><h1 tabIndex={-1}>Better inputs.<br/><em>Shared understanding.</em></h1><p className="lead">Show how you review an initiative update. The Ropes learns your reasoning, then helps division officers prepare the inputs you need.</p>
+          {providerStatus?.openAccessUntil && <p className="fine">Open demo · no login required until {new Date(providerStatus.openAccessUntil).toLocaleString()}. Begin with the text walkthrough. Choose live voice in setup while the shared demo allowance lasts.</p>}
           <button className="primary begin" onClick={() => { setStarted(true); activity(); }}>Begin expert review <span aria-hidden="true">↗</span></button><button className="text-button" onClick={() => setProjectSetup('expert')}>Use my own project →</button><p className="session-promise">Try the example or enter your own initiative<br/>Nothing is recording. Knowledge starts empty.</p>
           <div className="journey-preview"><span><b>01</b> Show your review</span><span><b>02</b> Confirm the guidance</span><span><b>03</b> Help a colleague</span></div>
         </div>

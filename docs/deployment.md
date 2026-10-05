@@ -2,6 +2,12 @@
 
 Prepared for one Node web service with a one-GB private disk. This document does not create a Render account, accept terms, enter credentials or deploy. Use the approved sanitized source snapshot. Public deployment and costs need the operator's authorization; any new binding account/service terms need explicit acceptance. Never paste credentials into chat or this document.
 
+## Temporary open access
+
+To open an explicitly approved judging window, set `DEMO_OPEN_UNTIL` to an absolute ISO timestamp, for example `2026-10-12T04:00:00Z` (12 October 2026, noon Singapore time). The homepage and API accept anonymous visitors only before that expiry; existing Basic authentication resumes automatically afterward, including across restarts. Anonymous voice sockets are also bounded by the access expiry. Keep `PUBLIC_DEMO=true`, the existing strong demo credentials, exact HTTPS host/origin settings, and the persistent budget ledger. Do not reset or enlarge the usage allowance. Invalid expiry values fail startup; an empty or past expiry requires login.
+
+The text walkthrough remains the default and uses no paid operations. Live visitors share the existing provider reservations and eight-operation limit. A public window does not guarantee enough allowance for a full live run. Verify remaining capacity and publish only tested claims. After deployment, confirm a fresh unauthenticated homepage/status request succeeds, wrong Origin remains rejected, and no credential is exposed.
+
 ## Current production endpoint
 
 The active Render service is **The Ropes**, connected to [papermelon/the-ropes](https://github.com/papermelon/the-ropes). Use **https://the-ropes.onrender.com** for the hosted demo and share the existing access credentials separately. Exact host/origin settings are `ALLOWED_HOSTS=the-ropes.onrender.com` and `ALLOWED_ORIGINS=https://the-ropes.onrender.com`.

@@ -124,6 +124,49 @@ test('Agent and Scribe credentials stay server-side; relays reject cross-origin/
   }
 });
 
+test('temporary public access opens without credentials, preserves paid gates and restores login at expiry', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'apprentice-open-demo-'));
+  const expires = Date.now() + 86400000;
+  const values = { PUBLIC_DEMO: 'true', DEMO_OPEN_UNTIL: new Date(expires).toISOString(), ALLOWED_HOSTS: 'demo.example', ALLOWED_ORIGINS: 'https://demo.example', DEMO_ACCESS_USER: 'judge', DEMO_ACCESS_PASSWORD: 'test-only-strong-password', BUDGET_LEDGER_PATH: join(directory, 'budget.json'), BUDGET_INITIALIZE_ALLOWED: 'true', BUDGET_KILL_SWITCH_PATH: join(directory, 'disabled'), PROVIDER_TOTAL_CAP_USD: '10', LIVE_USAGE_APPROVED: 'true', LIVE_USAGE_DISABLED: 'false', MAX_API_REQUESTS_PER_MINUTE: '60' };
+  const old = Object.keys(values).map(key => process.env[key]); Object.entries(values).forEach(([key, value]) => { process.env[key] = value; });
+  const realNow = Date.now; let server: ReturnType<typeof makeServer> | undefined;
+  try {
+    process.env.DEMO_OPEN_UNTIL = 'forever'; assert.throws(() => makeServer(), /ISO expiry/);
+    process.env.DEMO_OPEN_UNTIL = '2026-10-12'; assert.throws(() => makeServer(), /ISO expiry/);
+    process.env.DEMO_OPEN_UNTIL = values.DEMO_OPEN_UNTIL;
+    server = makeServer(); await new Promise<void>(resolve => server!.listen(0, '127.0.0.1', resolve));
+    const address = server.address(); assert.ok(address && typeof address !== 'string'); const base = `http://127.0.0.1:${address.port}`;
+    const headers = { Host: 'demo.example', 'X-Forwarded-Proto': 'https', Origin: 'https://demo.example', 'Content-Type': 'application/json' };
+    const call = (path: string, body?: unknown, overrides: Record<string, string> = {}) => new Promise<Response>((resolve, reject) => {
+      const req = request(base + path, { method: body === undefined ? 'GET' : 'POST', headers: { ...headers, ...overrides } }, response => {
+        let text = ''; response.on('data', chunk => { text += chunk; }); response.on('end', () => resolve(new Response(text, { status: response.statusCode })));
+      }); req.on('error', reject); req.end(body === undefined ? undefined : JSON.stringify(body));
+    });
+    assert.equal((await call('/')).status, 200);
+    const before = await (await call('/api/status')).json(); assert.equal(before.openAccessUntil, values.DEMO_OPEN_UNTIL); assert.equal(before.liveRequests, 0);
+    assert.equal((await call('/api/status', undefined, { Host: 'evil.example' })).status, 403);
+    assert.equal((await call('/api/status', undefined, { 'X-Forwarded-Proto': 'http' })).status, 403);
+    assert.equal((await call('/api/session', { mode: 'mock', consent: true }, { Origin: 'https://evil.example' })).status, 403);
+    assert.equal((await call('/api/session', { mode: 'mock', consent: false })).status, 400);
+    const mock = await (await call('/api/session', { mode: 'mock', consent: true })).json();
+    assert.equal((await call(`/api/session/${mock.id}/case`, { topic: 'delivery' })).status, 200);
+    assert.equal((await call(`/api/session/${mock.id}/voice`, {})).status, 400);
+    const live = await (await call('/api/session', { mode: 'live', consent: true })).json(); assert.ok(live.id);
+    await writeFile(values.BUDGET_KILL_SWITCH_PATH, 'Disabled deliberately for test.');
+    assert.equal((await call(`/api/session/${live.id}/reason`, { frame: 'data:image/jpeg;base64,/9j/2Q==', report: trainingReport, topic: 'delivery', previous: [] })).status, 400);
+    const after = await (await call('/api/status')).json(); assert.equal(after.liveRequests, 0); assert.equal(after.committedUSD, before.committedUSD); assert.equal(after.approved, false);
+    Date.now = () => expires;
+    assert.equal((await call('/')).status, 401); assert.equal((await call('/api/status')).status, 401);
+    assert.equal((await call(`/api/session/${mock.id}/revoke`, {})).status, 401);
+    const loggedIn = await call('/api/status', undefined, { Authorization: `Basic ${Buffer.from('judge:test-only-strong-password').toString('base64')}` });
+    assert.equal(loggedIn.status, 200); assert.equal((await loggedIn.json()).openAccessUntil, null);
+  } finally {
+    Date.now = realNow;
+    if (server) { server.closeAllConnections(); await new Promise<void>(resolve => server!.close(() => resolve())); }
+    Object.keys(values).forEach((key, i) => { if (old[i] === undefined) delete process.env[key]; else process.env[key] = old[i]; }); await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('public demo fails closed and enforces HTTPS, exact hosts/origins, access control, rate limits and kill switch', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'apprentice-public-'));
   const values = { PUBLIC_DEMO: 'true', ALLOWED_HOSTS: 'demo.example', ALLOWED_ORIGINS: 'https://demo.example', DEMO_ACCESS_USER: 'judge', DEMO_ACCESS_PASSWORD: 'test-only-strong-password', BUDGET_LEDGER_PATH: join(directory, 'budget.json'), BUDGET_INITIALIZE_ALLOWED: 'true', BUDGET_KILL_SWITCH_PATH: join(directory, 'disabled'), PROVIDER_TOTAL_CAP_USD: '3', LIVE_USAGE_APPROVED: 'true', MAX_API_REQUESTS_PER_MINUTE: '2' };
